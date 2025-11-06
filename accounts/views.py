@@ -1,9 +1,10 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth import login as auth_login, authenticate, logout as auth_logout
 from .forms import CustomUserCreationForm, CustomErrorList
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from .models import Profile
 
 @login_required
 def logout(request):
@@ -47,3 +48,26 @@ def orders(request):
     template_data['orders'] = request.user.order_set.all()
     return render(request, 'accounts/orders.html', 
         {'template_data': template_data})
+
+@login_required
+def profile_view(request):
+    profile = request.user.profile
+    edit_mode = request.GET.get("edit") == "true"
+    saved = False
+
+    if request.method == "POST":
+        profile.full_name = request.POST.get("full_name")
+        profile.address = request.POST.get("address")
+        profile.city = request.POST.get("city")
+        profile.postal_code = request.POST.get("postal_code")
+        profile.phone = request.POST.get("phone")
+        profile.save()
+        saved = True
+        edit_mode = False  # go back to view mode after saving
+
+    context = {
+        "profile": profile,
+        "edit_mode": edit_mode,
+        "saved": saved,
+    }
+    return render(request, "accounts/profile.html", context)
