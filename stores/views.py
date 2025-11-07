@@ -7,6 +7,8 @@ import uuid
 import json
 
 
+from django.core.paginator import Paginator
+from django.contrib import messages
 def add_to_cart(request, id):
     if request.method != 'POST':
         return redirect('stores.cafe')
@@ -200,4 +202,39 @@ def submit_review(request, store_id):
     Review.objects.create(store=store, user=request.user, rating=rating, comment=comment)
     return redirect('stores.cafe')
    
+@login_required
+def Status(request):
+    order = Order.objects.filter(user=request.user).only('id', 'total', 'date','status')
+    paginator = Paginator(order, 10)
+    page_number = request.GET.get('page')
+    order = paginator.get_page(page_number)
+    return render(request, 'stores/status.html', {'template_data': {'orders': order}})
 
+@login_required
+def order_details(request, id):
+    order = get_object_or_404(Order, id=id, user=request.user)
+    items = OrderItem.objects.filter(order=order).select_related("drink")
+    return render(request, 'stores/detail.html', {'order': order, 'items':items})
+
+@login_required
+def order_reorder(request, id):
+    if request.method != "POST":
+        return redirect("stores/detail.html", id=id)
+
+    order = get_object_or_404(Order, id=id, user=request.user)
+    items = OrderItem.objects.filter(order=order).select_related("drink")
+
+    cart = request.session.get("cart_drinks", {})
+
+    cart = {}
+
+
+    for it in items:
+        # adjust to your cart’s API/structure
+        key = str(it.drink.id)
+        cart[key] = cart.get(key, 0) + int(it.quantity)
+
+    request.session["cart_drinks"] = cart
+    request.session.modified = True
+    messages.success(request, f"Re-added {items.count()} item(s) from order #{order.id} to your cart.")
+    return redirect("stores.cart")

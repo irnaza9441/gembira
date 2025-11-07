@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="p-3">
+    <h2>Your Orders</h2>
+    <table class="table table-sm table-striped align-middle">
+      <thead class="align-middle">
+        <tr>
+          <th>Order ID</th>
+          <th>Total</th>
+          <th>Date</th>
+          <th></th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in template_data.orders %}
+          <tr>
+            <td>{{ order.id }}</td>
+            <td> $ {{ order.total }}</td>
+            <td>{{ order.date|date:"Y-m-d H:i" }}</td>
+            <td class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'detail' order.id %}">View</a>
+                <form method="post" action="{% url 'reorder' order.id %}">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-primary" type="submit">Re-order</button>
+                </form>
+            </td>
+            <td>{{ order.status }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4">No past orders.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
