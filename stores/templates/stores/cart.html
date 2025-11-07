@@ -32,7 +32,11 @@
       </div>
       <div class="mt-3 text-end">
         <a href="{% url 'stores.cafe' %}" class="btn btn-secondary me-2">Add more drinks</a>
-        <a href="{% url 'stores.clear_cart' %}" class="btn btn-danger">Empty Cart</a>
+        <a href="{% url 'stores.clear_cart' %}" class="btn btn-danger me-2">Empty Cart</a>
+        <form method="POST" action="{% url 'stores.purchase' %}" class="d-inline-block">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success">Purchase</button>
+        </form>
       </div>
     {% else %}
       <p>Your cart is empty. <a href="{% url 'stores.cafe' %}">Browse drinks</a></p>

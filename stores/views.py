@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from .models import Store, Drink
 from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from .models import Order, OrderItem
 
 
 def add_to_cart(request, id):
@@ -77,6 +79,35 @@ def cart(request):
 def clear_cart(request):
     request.session['cart_drinks'] = {}
     return redirect('stores.cart')
+
+
+@login_required
+def purchase(request):
+    cart = request.session.get('cart_drinks', {})
+    if not cart:
+        return redirect('stores.cart')
+
+    total = 0
+    items = []
+    price_per_item = 5
+    for id_str, qty in cart.items():
+        try:
+            drink = Drink.objects.get(id=int(id_str))
+        except Drink.DoesNotExist:
+            continue
+        subtotal = price_per_item * int(qty)
+        total += subtotal
+        items.append((drink, int(qty), price_per_item))
+
+    # create order
+    order = Order.objects.create(user=request.user, total=total)
+    for drink, qty, price in items:
+        OrderItem.objects.create(order=order, drink=drink, price=price, quantity=qty)
+
+    # clear cart
+    request.session['cart_drinks'] = {}
+
+    return render(request, 'stores/purchase.html', {'template_data': {'order_id': order.id, 'total': total}})
 
 def cafe(request):
     template_data = {}
