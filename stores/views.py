@@ -224,15 +224,45 @@ def order_reorder(request, id):
     order = get_object_or_404(Order, id=id, user=request.user)
     items = OrderItem.objects.filter(order=order).select_related("drink")
 
-    cart = request.session.get("cart_drinks", {})
+    cart = request.session.get("cart_drinks", []) or []
 
-    cart = {}
-
-
+    if isinstance(cart, dict):
+        normalized = []
+        for id_str, q in cart.items():
+            try:
+                d_id = int(id_str)
+                qty = int(q)
+            except Exception:
+                continue
+            normalized.append({
+                'key': uuid.uuid4().hex,
+                'drink_id': d_id,
+                'quantity': qty,
+                'customization': {}
+            })
+        cart = normalized
+        
     for it in items:
-        # adjust to your cart’s API/structure
-        key = str(it.drink.id)
-        cart[key] = cart.get(key, 0) + int(it.quantity)
+        drink_id = it.drink.id
+        qty = int(it.quantity)
+        customization = it.customization or {}
+
+        merged = False
+        for row in cart:
+            if (isinstance(row, dict)
+                and row.get('drink_id') == drink_id
+                and (row.get('customization') or {}) == customization):
+                row['quantity'] = int(row.get('quantity', 0)) + qty
+                merged = True
+                break
+
+        if not merged:
+            cart.append({
+                'key': uuid.uuid4().hex,
+                'drink_id': drink_id,
+                'quantity': qty,
+                'customization': customization
+            })
 
     request.session["cart_drinks"] = cart
     request.session.modified = True
