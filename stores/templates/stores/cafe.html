@@ -40,9 +40,21 @@
     <div class="row mt-3">
       <div class="col mx-auto  mb-3">
 {% for drink in template_data.drinks %}
-   <h3>
-    {{drink.name}}
-   </h3>
+  <div class="card mb-3 p-3">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h5 class="mb-0">{{ drink.name }}</h5>
+      </div>
+      <div class="text-end">
+        <div class="me-3 d-inline-block">$5</div>
+        <form method="POST" action="{% url 'stores.add_to_cart' drink.id %}" class="d-inline-flex align-items-center">
+          {% csrf_token %}
+          <input type="number" name="quantity" value="1" min="1" class="form-control form-control-sm me-2" style="width:80px">
+          <button type="submit" class="btn btn-sm btn-primary">Add to cart</button>
+        </form>
+      </div>
+    </div>
+  </div>
 {% endfor %}
 </div>
 </div>
