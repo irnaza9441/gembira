@@ -11,15 +11,22 @@
             <div>
               <strong>{{ item.drink.name }}</strong>
               <div class="text-muted">Unit price: ${{ item.price }}</div>
+              {% if item.customization %}
+                <div class="mt-1 small text-muted">Options:
+                  {% if item.customization.milk %}<span>Milk: {{ item.customization.milk }}</span>{% endif %}
+                  {% if item.customization.sugar %}<span> • Sugar: {{ item.customization.sugar }}</span>{% endif %}
+                  {% if item.customization.addons %}<span> • Add-ons: {{ item.customization.addons|join:", " }}</span>{% endif %}
+                </div>
+              {% endif %}
             </div>
             <div class="d-flex align-items-center">
-              <form method="POST" action="{% url 'stores.update_cart_item' item.drink.id %}" class="me-2 d-flex align-items-center">
+              <form method="POST" action="{% url 'stores.update_cart_item' item.key %}" class="me-2 d-flex align-items-center">
                 {% csrf_token %}
                 <input type="number" name="quantity" value="{{ item.quantity }}" min="1" class="form-control form-control-sm" style="width:80px">
                 <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Update</button>
               </form>
               <div class="me-3">Subtotal: ${{ item.subtotal }}</div>
-              <form method="POST" action="{% url 'stores.remove_cart_item' item.drink.id %}">
+              <form method="POST" action="{% url 'stores.remove_cart_item' item.key %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-danger">Remove</button>
               </form>
