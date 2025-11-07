@@ -1,0 +1,144 @@
+
+{% extends 'base.html' %}
+{% block content %}  
+
+<div class="p-3">
+  <div class="container">
+    <div class="row mt-3">
+      <div class="col mx-auto  mb-3">
+  
+<div class="col mx-auto mb-3">
+        <h2>List of Drinks</h2>
+        <hr />
+</div>
+<p class="card-text">
+<form method="GET">
+<div class="row">
+<div class="col-auto">
+<div class="input-group col-auto">
+ <div class="input-group-text"> 
+  Search</div>
+ <input type="text" class="form-control" 
+ name="search">
+</div>
+</div>
+<div class="col-auto">
+<button class="btn bg-dark text-white"
+    type="submit">Search</button>
+    </div>
+  </div>
+</form>
+</p>
+
+</div>
+</div>
+</div>
+</div>
+
+<div class="p-3">
+  <div class="container">
+    <div class="row mt-3">
+      <div class="col mx-auto  mb-3">
+{% for drink in template_data.drinks %}
+  <div class="card mb-3 p-3">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h5 class="mb-0">{{ drink.name }}</h5>
+      </div>
+      <div class="text-end">
+        <div class="me-3 d-inline-block">$5</div>
+        <form method="POST" action="{% url 'stores.add_to_cart' drink.id %}" class="d-inline-flex align-items-center">
+          {% csrf_token %}
+          <div class="me-2">
+            <input type="number" name="quantity" value="1" min="1" class="form-control form-control-sm" style="width:80px">
+          </div>
+          <div class="me-2">
+            <select name="milk" class="form-select form-select-sm">
+              <option value="">Milk</option>
+              <option value="whole">Whole</option>
+              <option value="skim">Skim</option>
+              <option value="soy">Soy</option>
+              <option value="almond">Almond</option>
+              <option value="oat">Oat</option>
+            </select>
+          </div>
+          <div class="me-2">
+            <select name="sugar" class="form-select form-select-sm">
+              <option value="">Sugar</option>
+              <option value="no">No sugar</option>
+              <option value="less">Less</option>
+              <option value="normal">Normal</option>
+              <option value="extra">Extra</option>
+            </select>
+          </div>
+          <div class="me-2">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" name="addons" id="vanilla-{{ drink.id }}" value="vanilla">
+              <label class="form-check-label" for="vanilla-{{ drink.id }}">Vanilla</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" name="addons" id="caramel-{{ drink.id }}" value="caramel">
+              <label class="form-check-label" for="caramel-{{ drink.id }}">Caramel</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" name="addons" id="extra-shot-{{ drink.id }}" value="extra_shot">
+              <label class="form-check-label" for="extra-shot-{{ drink.id }}">Extra shot</label>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-sm btn-primary">Add to cart</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+</div>
+</div>
+</div>
+</div>
+
+
+
+  <div class="p-3">
+    <div class="container">
+      <h3>Reviews</h3>
+      <hr />
+      <p>Average rating: {% if template_data.avg_rating %}{{ template_data.avg_rating|floatformat:1 }} / 5{% else %}No ratings yet{% endif %}</p>
+
+      {% if user.is_authenticated %}
+        <form method="POST" action="{% url 'stores.submit_review' 1 %}">
+          {% csrf_token %}
+          <div class="mb-2">
+            <label for="rating">Rating</label>
+            <select name="rating" id="rating" class="form-select" style="width:120px">
+              <option value="5">5</option>
+              <option value="4">4</option>
+              <option value="3">3</option>
+              <option value="2">2</option>
+              <option value="1">1</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label for="comment">Comment</label>
+            <textarea name="comment" id="comment" class="form-control" rows="3"></textarea>
+          </div>
+          <button class="btn btn-primary" type="submit">Submit review</button>
+        </form>
+      {% else %}
+        <p><a href="/accounts/login/">Log in</a> to leave a review.</p>
+      {% endif %}
+
+      <div class="mt-3">
+        {% for review in template_data.reviews %}
+          <div class="card mb-2 p-2">
+            <div><strong>{{ review.user.username }}</strong> - {{ review.rating }} / 5</div>
+            <div class="text-muted">{{ review.created }}</div>
+            <div class="mt-2">{{ review.comment }}</div>
+          </div>
+        {% empty %}
+          <p>No reviews yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% endblock content %}

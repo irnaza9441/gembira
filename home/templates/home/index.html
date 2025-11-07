@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+
+<!---
+<header class="masthead bg-index text-white text-center py-4">
+  <div class="container d-flex align-items-center flex-column pt-2">
+    <h2>GEMBIRA</h2>
+  </div>
+</header>
+-->
+<div class="p-3">
+  <div class="container">
+    <div class="row mt-3">
+      <div class="col mx-auto text-center mb-3">
+
+<div style="position: relative; display: inline-block;">
+  <img src="media/default_map.jpg" style="width: 80%; max-width: 580px;">
+
+  <a href="{% url 'stores.cafe' %}" style="position: absolute; top: 46%; left: 30%; transform: translate(-50%, -50%); background-color: #8B4513; color: white; padding: 5px 10px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+    Search Cafe
+  </a>
+  
+</div>
+
+
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
