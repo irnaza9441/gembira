@@ -2,7 +2,7 @@ from django.shortcuts import render
 from .models import Store, Drink, Review
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from .models import Order, OrderItem
+from .models import Order, OrderItem, DrinkForm
 import uuid
 import json
 
@@ -140,31 +140,29 @@ def purchase(request):
 
 def cafe(request):
     template_data = {}
+    #template_data["role"] = 'customer' if request.user == "AnonymousUser" else request.user.profile.role
+    template_data["role"]  = getattr(request.user, 'profile', 'skills') or 'customer'
     ####create a instance of the store using the store
     store_name, created = Store.objects.get_or_create(id=1, defaults={'title': 'Cafe'})
 
     ####create a dummy list of drinks with model type drink using the store id that was just created to show that they belong to that store
 
     dummy_data = [
-        {'name': "Latte", "store_id": Store.objects.get(id=1)},
-        {'name': "Cappuccino", "store_id": Store.objects.get(id=1)},
-        {'name': "Espresso", "store_id": Store.objects.get(id=1)},
-        {'name': "Iced Americano", "store_id": Store.objects.get(id=1)},
-        {'name': "Caramel Macchiato", "store_id": Store.objects.get(id=1)},
-        {'name': "Matcha Latte", "store_id": Store.objects.get(id=1)},
-        {'name': "Chai Tea", "store_id": Store.objects.get(id=1)},
-        {'name': "Cold Brew", "store_id": Store.objects.get(id=1)},
-        {'name': "Mocha", "store_id": Store.objects.get(id=1)},
-        {'name': "Strawberry Smoothie", "store_id": Store.objects.get(id=1)},
+        {'name': "Latte", "store_id": Store.objects.get(id=1), 'image':''},
+        {'name': "Cappuccino", "store_id": Store.objects.get(id=1), 'image':''},
+        {'name': "Espresso", "store_id": Store.objects.get(id=1), 'image':''},
+        {'name': "Iced Americano", "store_id": Store.objects.get(id=1), 'image':''},
+        {'name': "Caramel Macchiato", "store_id": Store.objects.get(id=1), 'image':''},
+        {'name': "Matcha Latte", "store_id": Store.objects.get(id=1), 'image':''},
+        {'name': "Chai Tea", "store_id": Store.objects.get(id=1), 'image':''},
+        {'name': "Cold Brew", "store_id": Store.objects.get(id=1), 'image':''},
+        {'name': "Mocha", "store_id": Store.objects.get(id=1), 'image':''},
+        {'name': "Strawberry Smoothie", "store_id": Store.objects.get(id=1), 'image':''},
     ]
 
     if not Drink.objects.all().exists():
         for drink_dict in dummy_data:
             Drink.objects.create(**drink_dict)
-
-   
-
-
 
     search_term = request.GET.get('search')
     if search_term:
@@ -187,6 +185,21 @@ def cafe(request):
 
     return render(request, 'stores/cafe.html', {'template_data': template_data})
 
+@login_required
+def edit_drink(request, id):
+    template_data = {}
+    drink = get_object_or_404(Drink, id=id)
+    form = DrinkForm(instance=drink)
+
+    if request.method == 'POST':
+        form = DrinkForm(request.POST, request.FILES, instance=drink)
+        if form.is_valid():
+            form.save()
+            return redirect('stores.cafe')
+        else:
+            form = DrinkForm(instance=drink)
+    template_data = {'form': form,'drink': drink,'title': 'Edit Drink'}
+    return render(request, 'stores/edit_drink.html', {'template_data': template_data})
 
 @login_required
 def submit_review(request, store_id):
