@@ -10,7 +10,52 @@
             <hr />
             <form method="POST">
               {% csrf_token %}
-              {{ template_data.form.as_p }}
+               <!-- Show form-level errors -->
+              {% if template_data.user_form.non_field_errors %}
+              <div class="mb-3">{{ template_data.user_form.non_field_errors }}</div>
+              {% endif %}
+              {% if template_data.profile_form.errors %}
+              <div class="mb-3">{{ template_data.profile_form.non_field_errors }}{{ template_data.profile_form.errors }}</div>
+              {% endif %}
+              
+              <!-- User Account Information -->
+              <div class="mb-4">
+                <h4 class="text-primary">Account Information</h4>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-group mb-3">
+                      <label for="{{ template_data.user_form.username.id_for_label }}">Username</label>
+                      {{ template_data.user_form.username }}
+                      {{ template_data.user_form.username.errors }}
+                    </div>
+                  </div>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-group mb-3">
+                      <label for="{{ template_data.user_form.password1.id_for_label }}">Password</label>
+                      {{ template_data.user_form.password1 }}
+                      {{ template_data.user_form.password1.errors }}
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-group mb-3">
+                      <label for="{{ template_data.user_form.password2.id_for_label }}">Confirm Password</label>
+                      {{ template_data.user_form.password2 }}
+                      {{ template_data.user_form.password2.errors }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <h4 class="text-primary">Role</h4>
+                <div class="mb-3">
+                  <a class="btn btn-sm {% if template_data.show_customer_fields %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?role=customer">Sign up as Customer</a>
+                  <a class="btn btn-sm {% if template_data.show_customer_fields %}btn-outline-primary{% else %}btn-primary{% endif %}" href="?role=manager">Sign up as Manager</a>
+                </div>
+                <input type="hidden" name="role" value="{% if template_data.show_customer_fields %}customer{% else %}manager{% endif %}">
+              </div>
+
               <button type="submit"
                 class="btn bg-dark text-white">Sign Up
               </button>
