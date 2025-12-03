@@ -16,8 +16,6 @@
 <div class="row">
 <div class="col-auto">
 <div class="input-group col-auto">
- <div class="input-group-text"> 
-  Search</div>
  <input type="text" class="form-control" 
  name="search">
 </div>
@@ -42,6 +40,13 @@
 {% for drink in template_data.drinks %}
   <div class="card mb-3 p-3">
     <div class="d-flex justify-content-between align-items-center">
+    {% if drink.image %}
+            <div class="mb-3">
+              <div>
+                <img src="{{ drink.image.url }}" alt="{{ drink.name }}" style="max-width: 300px; height: auto;" class="img-thumbnail">
+              </div>
+            </div>
+    {% endif %}
       <div>
         <h5 class="mb-0">{{ drink.name }}</h5>
       </div>
@@ -84,6 +89,13 @@
               <input class="form-check-input" type="checkbox" name="addons" id="extra-shot-{{ drink.id }}" value="extra_shot">
               <label class="form-check-label" for="extra-shot-{{ drink.id }}">Extra shot</label>
             </div>
+          </div>
+          <div class="me-2">
+          {% if template_data.role == "manager" %}
+              <a class = "btn btn-sm btn-primary" style="background-color: #8B4513; color: white;"
+                href = "{% url 'stores.edit_drink' id=drink.id %}">Edit
+              </a>
+          {% endif %}
           </div>
           <button type="submit" class="btn btn-sm btn-primary">Add to cart</button>
         </form>
