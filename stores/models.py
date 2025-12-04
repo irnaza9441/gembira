@@ -6,6 +6,8 @@ from django import forms
 class Store(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.TextField()
+    # human-friendly cafe hours shown in the banner
+    hours = models.TextField(blank=True, default='Mon-Fri 8:00 - 18:00')
 
     def __str__(self):
         return self.title
@@ -15,6 +17,9 @@ class Drink(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.TextField()
     store_id = models.ForeignKey(Store, on_delete=models.CASCADE)
+    # whether this drink is available for purchase
+    in_stock = models.BooleanField(default=True)
+
     image = models.ImageField(upload_to='drinks/', blank=True, null=True)
 
     def __str__(self):

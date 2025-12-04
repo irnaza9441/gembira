@@ -14,6 +14,10 @@ def add_to_cart(request, id):
         return redirect('stores.cafe')
 
     drink = get_object_or_404(Drink, id=id)
+    # prevent adding out-of-stock items
+    if not getattr(drink, 'in_stock', True):
+        messages.error(request, f"{drink.name} is currently out of stock.")
+        return redirect('stores.cafe')
     try:
         qty = int(request.POST.get('quantity', 1))
     except (TypeError, ValueError):
@@ -140,8 +144,14 @@ def purchase(request):
 
 def cafe(request):
     template_data = {}
-    #template_data["role"] = 'customer' if request.user == "AnonymousUser" else request.user.profile.role
-    template_data["role"]  = getattr(request.user, 'profile', 'skills') or 'customer'
+    # determine role string for template usage
+    role = 'customer'
+    if request.user.is_authenticated:
+        try:
+            role = request.user.profile.role or 'customer'
+        except Exception:
+            role = 'customer'
+    template_data["role"] = role
     ####create a instance of the store using the store
     store_name, created = Store.objects.get_or_create(id=1, defaults={'title': 'Cafe'})
 
@@ -174,7 +184,11 @@ def cafe(request):
     template_data["drinks"] = drinks
     template_data["title"] = "Cafe"
 
-    store = Store.objects.get(id=1)
+    # reuse the object we created/fetched earlier
+    store = store_name
+    # expose hours to the template
+    template_data['store_hours'] = getattr(store, 'hours', '')
+    template_data['store'] = store
     reviews = store.reviews.order_by('-created').all()
     avg_rating = None
     if reviews.exists():
@@ -184,6 +198,56 @@ def cafe(request):
     template_data['avg_rating'] = avg_rating
 
     return render(request, 'stores/cafe.html', {'template_data': template_data})
+
+
+@login_required
+def toggle_stock(request, id):
+    """Manager-only: toggle the in_stock flag for a Drink and redirect back to cafe.
+
+    Expects POST and only allows users whose profile.role == 'manager'.
+    """
+    if request.method != 'POST':
+        return redirect('stores.cafe')
+
+    try:
+        role = request.user.profile.role
+    except Exception:
+        role = None
+
+    if role != 'manager':
+        messages.error(request, 'Not authorized')
+        return redirect('stores.cafe')
+
+    drink = get_object_or_404(Drink, id=id)
+    drink.in_stock = not drink.in_stock
+    drink.save()
+    messages.success(request, f"Set '{drink.name}' in_stock = {drink.in_stock}")
+    return redirect('stores.cafe')
+
+
+@login_required
+def edit_hours(request):
+    """Manager-only: edit the cafe hours stored on the Store row (id=1).
+
+    Expects POST with 'hours' field. Falls back to redirect to cafe on GET.
+    """
+    if request.method != 'POST':
+        return redirect('stores.cafe')
+
+    try:
+        role = request.user.profile.role
+    except Exception:
+        role = None
+
+    if role != 'manager':
+        messages.error(request, 'Not authorized')
+        return redirect('stores.cafe')
+
+    store, _ = Store.objects.get_or_create(id=1, defaults={'title': 'Cafe'})
+    store.hours = request.POST.get('hours', '').strip()
+    store.save()
+    messages.success(request, 'Cafe hours updated')
+    return redirect('stores.cafe')
 
 @login_required
 def edit_drink(request, id):
