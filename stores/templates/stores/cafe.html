@@ -6,6 +6,35 @@
   <div class="container">
     <div class="row mt-3">
       <div class="col mx-auto  mb-3">
+        <!-- Cafe hours banner -->
+        {% if template_data.store_hours %}
+        <div class="card mb-3 p-3 bg-light text-dark">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>Cafe Hours:</strong> {{ template_data.store_hours }}
+            </div>
+            {% if template_data.role == 'manager' %}
+              <div>
+                <form method="POST" action="{% url 'stores.edit_hours' %}" class="d-inline-block">
+                  {% csrf_token %}
+                  <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#edit-hours-form">Edit hours</button>
+                </form>
+              </div>
+            {% endif %}
+          </div>
+          {% if template_data.role == 'manager' %}
+            <div class="collapse mt-3" id="edit-hours-form">
+              <form method="POST" action="{% url 'stores.edit_hours' %}">
+                {% csrf_token %}
+                <div class="input-group">
+                  <input name="hours" class="form-control" value="{{ template_data.store_hours }}">
+                  <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+              </form>
+            </div>
+          {% endif %}
+        </div>
+        {% endif %}
   
 <div class="col mx-auto mb-3">
         <h2>List of Drinks</h2>
@@ -48,7 +77,13 @@
             </div>
     {% endif %}
       <div>
-        <h5 class="mb-0">{{ drink.name }}</h5>
+        <h5 class="mb-0">{{ drink.name }}
+          {% if drink.in_stock %}
+            <span class="badge bg-success ms-2">In stock</span>
+          {% else %}
+            <span class="badge bg-danger ms-2">Out of stock</span>
+          {% endif %}
+        </h5>
       </div>
       <div class="text-end">
         <div class="me-3 d-inline-block">$5</div>
@@ -97,8 +132,22 @@
               </a>
           {% endif %}
           </div>
-          <button type="submit" class="btn btn-sm btn-primary">Add to cart</button>
+          {% if drink.in_stock %}
+            <button type="submit" class="btn btn-sm btn-primary">Add to cart</button>
+          {% else %}
+            <button type="button" class="btn btn-sm btn-secondary" disabled>Out of stock</button>
+          {% endif %}
         </form>
+        {% if template_data.role == "manager" %}
+          <form method="POST" action="{% url 'stores.toggle_stock' drink.id %}" class="d-inline-block ms-2">
+            {% csrf_token %}
+            {% if drink.in_stock %}
+              <button type="submit" class="btn btn-sm btn-outline-danger">Set out of stock</button>
+            {% else %}
+              <button type="submit" class="btn btn-sm btn-outline-success">Set in stock</button>
+            {% endif %}
+          </form>
+        {% endif %}
       </div>
     </div>
   </div>
