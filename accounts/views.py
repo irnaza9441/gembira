@@ -5,6 +5,7 @@ from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from .models import Profile
+from django.urls import reverse
 
 @login_required
 def logout(request):
@@ -24,6 +25,24 @@ def login(request):
         else:
             auth_login(request, user)
             return redirect('home.index')
+
+def manager_login(request):
+    """Manager-only login to access Django admin dashboard with dedicated template."""
+    template_data = {}
+    template_data['title'] = 'Manager Login'
+    if request.method == 'GET':
+        return render(request, 'accounts/manager_login.html', {'template_data': template_data})
+    elif request.method == 'POST':
+        user = authenticate(request, username=request.POST.get('username'), password=request.POST.get('password'))
+        if user is None:
+            template_data['error'] = 'The username or password is incorrect.'
+            return render(request, 'accounts/manager_login.html', {'template_data': template_data})
+        elif not user.is_staff:
+            template_data['error'] = 'You are not authorized to access the admin dashboard.'
+            return render(request, 'accounts/manager_login.html', {'template_data': template_data})
+        else:
+            auth_login(request, user)
+            return redirect('/admin/')
 
 def signup(request):
     template_data = {}
