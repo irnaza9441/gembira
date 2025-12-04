@@ -128,7 +128,7 @@
           <div class="me-2">
           {% if template_data.role == "manager" %}
               <a class = "btn btn-sm btn-primary" style="background-color: #8B4513; color: white;"
-                href = "{% url 'stores.edit_drink' id=drink.id %}">Edit
+                href = "{% url 'stores.edit_drink' drink.id %}">Edit
               </a>
           {% endif %}
           </div>
@@ -166,7 +166,7 @@
       <p>Average rating: {% if template_data.avg_rating %}{{ template_data.avg_rating|floatformat:1 }} / 5{% else %}No ratings yet{% endif %}</p>
 
       {% if user.is_authenticated %}
-        <form method="POST" action="{% url 'stores.submit_review' 1 %}">
+        <form method="POST" action="{% url 'stores.submit_review' template_data.store.id %}">
           {% csrf_token %}
           <div class="mb-2">
             <label for="rating">Rating</label>
