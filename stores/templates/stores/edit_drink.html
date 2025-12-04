@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="p-3 mt-4">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card shadow p-3 mb-4 rounded">
+          <div class="card-body">
+            <h2>Edit Drink</h2>
+            <hr />
+            
+            <!-- Show current image if exists -->
+            {% if template_data.drink.image %}
+            <div class="mb-3">
+              <label class="form-label">Current Image:</label>
+              <div>
+                <img src="{{ template_data.drink.image.url }}" alt="{{ template_data.drink.name }}" style="max-width: 300px; height: auto;" class="img-thumbnail">
+              </div>
+            </div>
+            {% endif %}
+            
+            <form method="POST" enctype="multipart/form-data">
+              {% csrf_token %}
+              
+              <div class="form-group mb-3">
+                <label for="{{ template_data.form.image.id_for_label }}">Upload New Image</label>
+                {{ template_data.form.image }}
+                {{ template_data.form.image.errors }}
+                <small class="form-text text-muted">Upload a new image to replace the current one</small>
+              </div>
+
+            <!-- Preview area -->
+              <div class="mb-3" id="preview-container" style="display:none;">
+                <label class="form-label">New Image Preview:</label>
+                <div>
+                  <img id="preview-image" src="" alt="Preview" style="max-width: 300px; height: auto;" class="img-thumbnail">
+                </div>
+              </div>
+              
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+              <a href="{% url 'stores.cafe' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('{{ template_data.form.image.id_for_label }}').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('preview-image').src = e.target.result;
+      document.getElementById('preview-container').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+});
+</script>
+{% endblock content %}

@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login as auth_login, authenticate, logout as auth_logout
-from .forms import CustomUserCreationForm, CustomErrorList
+from .forms import CustomUserCreationForm, CustomErrorList, ProfileForm
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -47,17 +47,30 @@ def manager_login(request):
 def signup(request):
     template_data = {}
     template_data['title'] = 'Sign Up'
-
+    selected_role = request.GET.get('role', 'customer')
+    selected_role = 'customer' if selected_role not in ['customer', 'manager'] else selected_role
     if request.method == 'GET':
-        template_data['form'] = CustomUserCreationForm()
+        template_data['user_form'] = CustomUserCreationForm()
+        template_data['profile_form'] = ProfileForm()
+        template_data['show_customer_fields'] = (selected_role == 'customer')
         return render(request, 'accounts/signup.html', {'template_data': template_data})
     elif request.method == 'POST':
-        form = CustomUserCreationForm(request.POST, error_class=CustomErrorList)
-        if form.is_valid():
-            form.save()
+        user_form = CustomUserCreationForm(request.POST, error_class=CustomErrorList)
+        profile_form = ProfileForm(request.POST)
+
+        if user_form.is_valid() and profile_form.is_valid():
+            user = user_form.save()
+            profile = user.profile
+            profile.role = request.POST.get('role', 'customer')
+            profile.save()
             return redirect('accounts.login')
         else:
-            template_data['form'] = form
+            template_data['user_form'] = user_form
+            template_data['profile_form'] = profile_form
+
+            selected_role = request.POST.get('role', 'customer')
+            selected_role = 'customer' if selected_role not in ['customer', 'manager'] else selected_role
+            template_data['show_customer_fields'] = (selected_role == 'customer')
             return render(request, 'accounts/signup.html', {'template_data': template_data})
 
 @login_required
