@@ -296,20 +296,42 @@ def order_details(request, id):
 @login_required
 def order_reorder(request, id):
     if request.method != "POST":
-        return redirect("stores/detail.html", id=id)
+        return redirect("stores.detail", id=id)
 
     order = get_object_or_404(Order, id=id, user=request.user)
     items = OrderItem.objects.filter(order=order).select_related("drink")
 
-    cart = request.session.get("cart_drinks", {})
+    # Get existing cart and ensure it's a list
+    cart = request.session.get("cart_drinks", None)
+    if cart is None:
+        cart = []
+    elif isinstance(cart, dict):
+        # Convert old dict format to new list format
+        new_list = []
+        for id_str, q in cart.items():
+            try:
+                d_id = int(id_str)
+            except Exception:
+                continue
+            new_list.append({'key': uuid.uuid4().hex, 'drink_id': d_id, 'quantity': int(q), 'customization': {}})
+        cart = new_list
 
-    cart = {}
-
-
+    # Add items from order to cart
     for it in items:
-        # adjust to your cart’s API/structure
-        key = str(it.drink.id)
-        cart[key] = cart.get(key, 0) + int(it.quantity)
+        item_key = uuid.uuid4().hex
+        # Use the customization from the order item if it exists
+        customization = getattr(it, 'customization', {})
+        if isinstance(customization, str):
+            try:
+                customization = json.loads(customization)
+            except:
+                customization = {}
+        cart.append({
+            'key': item_key,
+            'drink_id': it.drink.id,
+            'quantity': it.quantity,
+            'customization': customization
+        })
 
     request.session["cart_drinks"] = cart
     request.session.modified = True
