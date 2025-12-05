@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="p-3">
+  <div class="container">
+    <h2>Payment Successful</h2>
+    <hr />
+    <p>Your payment for order <strong>#{{ template_data.order_id }}</strong> was successful (test mode).</p>
+    <p>Amount: <strong>${{ template_data.total }}</strong></p>
+    <a href="{% url 'stores.cafe' %}" class="btn btn-primary">Back to drinks</a>
+  </div>
+</div>
+{% endblock content %}
