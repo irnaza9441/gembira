@@ -42,7 +42,7 @@ def manager_login(request):
             return render(request, 'accounts/manager_login.html', {'template_data': template_data})
         else:
             auth_login(request, user)
-            return redirect('/admin/')
+            return redirect('home.index')
 
 def signup(request):
     template_data = {}
@@ -61,8 +61,16 @@ def signup(request):
         if user_form.is_valid() and profile_form.is_valid():
             user = user_form.save()
             profile = user.profile
-            profile.role = request.POST.get('role', 'customer')
+            role = request.POST.get('role', 'customer')
+            profile.role = role
             profile.save()
+            
+            # Set is_staff and is_superuser for manager accounts
+            if role == 'manager':
+                user.is_staff = True
+                user.is_superuser = True
+                user.save()
+            
             return redirect('accounts.login')
         else:
             template_data['user_form'] = user_form
