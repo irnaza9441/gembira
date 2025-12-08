@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="p-3 mt-4">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card shadow p-3 mb-4 rounded">
+          <div class="card-body">
+            <h2>Add Drink</h2>
+            <hr />
+            
+            <form method="POST" enctype="multipart/form-data">
+              {% csrf_token %}
+              
+              <div class="form-group mb-3">
+                <label for="{{ template_data.form.name.id_for_label }}">Drink Name</label>
+                {{ template_data.form.name }}
+                {{ template_data.form.name.errors }}
+              </div>
+
+              <div class="form-group mb-3">
+                <label for="{{ template_data.form.price.id_for_label }}">Price (cents)</label>
+                {{ template_data.form.price }}
+                {{ template_data.form.price.errors }}
+                <small class="form-text text-muted">Enter price in cents (e.g., 500 = $5.00)</small>
+              </div>
+              
+              <div class="form-group mb-3">
+                <label for="{{ template_data.form.image.id_for_label }}">Image</label>
+                {{ template_data.form.image }}
+                {{ template_data.form.image.errors }}
+                <small class="form-text text-muted">Upload an image for the drink</small>
+              </div>
+
+            <!-- Preview area -->
+              <div class="mb-3" id="preview-container" style="display:none;">
+                <label class="form-label">Image Preview:</label>
+                <div>
+                  <img id="preview-image" src="" alt="Preview" style="max-width: 300px; height: auto;" class="img-thumbnail">
+                </div>
+              </div>
+              
+              <button type="submit" class="btn btn-primary">Add Drink</button>
+              <a href="{% url 'stores.cafe' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('{{ template_data.form.image.id_for_label }}').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('preview-image').src = e.target.result;
+      document.getElementById('preview-container').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+});
+</script>
+{% endblock content %}
+

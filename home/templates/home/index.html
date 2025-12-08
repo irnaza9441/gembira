@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_head %}
+  <!-- Mapbox GL JS CSS -->
+  
+  <link
+    href="https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.css"
+    rel="stylesheet"
+  />
+{% endblock %}
+
+{% block content %}
+  <style>
+    #map-container {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 200px);
+      min-height: 600px;
+      margin: 0;
+      padding: 0;
+    }
+    #map { 
+      position: absolute; 
+      top: 0; 
+      bottom: 0; 
+      left: 0;
+      width: 70%; 
+    }
+    #sidebar {
+      position: absolute; 
+      top: 0; 
+      right: 0; 
+      bottom: 0; 
+      width: 30%;
+      overflow-y: auto; 
+      padding: 10px; 
+      box-sizing: border-box;
+      border-left: 1px solid #ddd; 
+      background: #fafafa;
+    }
+    .place { 
+      margin-bottom: 8px; 
+      padding-bottom: 8px; 
+      border-bottom: 1px solid #ddd; 
+    }
+    .place-title { 
+      font-weight: 600; 
+    }
+    .small { 
+      font-size: 12px; 
+      color: #555; 
+    }
+    #locate { 
+      margin-bottom: 10px; 
+      padding: 8px 16px;
+      background-color: var(--warm-brown);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #locate:hover {
+      background-color: var(--dark-brown);
+    }
+  </style>
+
+  <div id="map-container">
+    <div id="map"></div>
+    <div id="sidebar">
+      <button id="locate">Use my location</button>
+      <div id="status" class="small"></div>
+      <h3>Nearby Cafes</h3>
+      <div id="list"></div>
+    </div>
+  </div>
+  
+  <script>
+    const cafePageUrl = "{% url 'home.cafe' %}";
+  </script>
+
+  <script>
+    // Define initMapbox BEFORE loading the Mapbox library
+    let mapboxLoaded = false;
+    let mapInitialized = false;
+    
+    function initMapbox() {
+      mapboxLoaded = true;
+      tryInitialize();
+    }
+    
+    // Global variables for map
+    let map = null;
+    let currentMarkers = [];
+    
+    function clearMarkers() {
+      currentMarkers.forEach(marker => marker.remove());
+      currentMarkers = [];
+    }
+    
+    function renderPlaces(featureCollection) {
+      const list = document.getElementById('list');
+      if (!list || !map) return;
+      
+      list.innerHTML = '';
+      clearMarkers();
+
+      // Check BEFORE using features
+      if (!featureCollection || !featureCollection.features || featureCollection.features.length === 0) {
+        const statusEl = document.getElementById('status');
+        if (statusEl) statusEl.textContent = 'No results found';
+        return;
+      }
+
+      featureCollection.features.forEach((feat) => {
+        const props = feat.properties;
+        const coords = feat.geometry.coordinates; // [lng, lat]
+
+        // Sidebar entry
+        const div = document.createElement('div');
+        div.className = 'place';
+
+        const title = document.createElement('div');
+        title.className = 'place-title';
+        title.textContent = props.name || 'Unnamed cafe';
+
+        const addr = document.createElement('div');
+        addr.className = 'small';
+        addr.textContent = props.full_address || props.address || '';
+
+        div.appendChild(title);
+        div.appendChild(addr);
+        list.appendChild(div);
+
+        // Map marker
+        const storeUrl = cafePageUrl;
+        const popupHtml = `
+      <strong>${title.textContent}</strong><br>
+      ${addr.textContent}<br>
+      <a href="${storeUrl}" class="popup-btn" target="_self">
+        Go to store page
+      </a>
+    `;
+
+        const marker = new mapboxgl.Marker()
+          .setLngLat(coords)
+          .setPopup(
+            new mapboxgl.Popup().setHTML(popupHtml)
+          )
+          .addTo(map);
+
+        currentMarkers.push(marker);
+
+        // Optional: fly-to on marker click
+        marker.getElement().addEventListener('click', () => {
+          map.flyTo({ center: coords, zoom: 15 });
+        });
+      });
+
+      // Fit bounds to all results
+      if (featureCollection.features.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds();
+        featureCollection.features.forEach((f) =>
+          bounds.extend(f.geometry.coordinates)
+        );
+        map.fitBounds(bounds, { padding: 50 });
+      }
+    }
+    
+    async function searchBakeriesAround(lng, lat) {
+      if (!map) return;
+      
+      const status = document.getElementById('status');
+      if (status) status.textContent = 'Searching for cafes...';
+      
+      const params = new URLSearchParams({
+        q: 'cafe',
+        types: 'poi',
+        poi_category: 'cafe',
+        limit: '10',
+        proximity: `${lng},${lat}`,
+        access_token: mapboxgl.accessToken
+      });
+      
+      const url = `https://api.mapbox.com/search/searchbox/v1/forward?${params.toString()}`;
+      
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) {
+          const text = await resp.text();
+          throw new Error(`Search API error ${resp.status}: ${text}`);
+        }
+        const data = await resp.json();
+        renderPlaces(data);
+        if (status) status.textContent = `Found ${data.features?.length || 0} cafes nearby.`;
+      } catch (err) {
+        console.error(err);
+        if (status) status.textContent = 'Error querying Mapbox Search.';
+      }
+    }
+    
+    function useBrowserLocation() {
+      if (!map) return;
+      
+      const status = document.getElementById('status');
+      if (!navigator.geolocation) {
+        if (status) status.textContent = 'Geolocation not supported.';
+        return;
+      }
+      
+      if (status) status.textContent = 'Getting your location...';
+      
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          
+          map.setCenter([lng, lat]);
+          map.setZoom(14);
+          
+          searchBakeriesAround(lng, lat);
+        },
+        (err) => {
+          console.error(err);
+          if (status) status.textContent = 'Could not get location. Using map center instead.';
+          const center = map.getCenter();
+          searchBakeriesAround(center.lng, center.lat);
+        }
+      );
+    }
+    
+    // Function to initialize map - called when both DOM and Mapbox are ready
+    function initializeMap() {
+      if (mapInitialized || map !== null) return; // Prevent double initialization
+      mapInitialized = true;
+      
+      // Ensure mapboxgl is loaded
+      if (typeof mapboxgl === 'undefined') {
+        console.error('Mapbox GL JS library not loaded');
+        return;
+      }
+
+      // Ensure DOM elements exist
+      const mapContainer = document.getElementById('map');
+      if (!mapContainer) {
+        console.error('Map container not found');
+        return;
+      }
+
+      // Ensure container has dimensions
+      const containerRect = mapContainer.getBoundingClientRect();
+      if (containerRect.width === 0 || containerRect.height === 0) {
+        console.warn('Map container has no dimensions, waiting...');
+        setTimeout(initializeMap, 100);
+        return;
+      }
+
+      mapboxgl.accessToken = 'pk.eyJ1IjoiamdhbjM5IiwiYSI6ImNtaXFvajMxazAxNnIzZ3B4dXd2Z2tsb20ifQ.2DWfUMkifvA2xtVtoq780w';
+
+      try {
+        map = new mapboxgl.Map({
+          container: 'map',
+          style: 'mapbox://styles/mapbox/streets-v12',
+          center: [-84.3963, 33.7756],
+          zoom: 13,
+        });
+      
+        map.addControl(new mapboxgl.NavigationControl());
+        
+        // Wire up button
+        const locateButton = document.getElementById('locate');
+        if (locateButton) {
+          locateButton.addEventListener('click', () => {
+            useBrowserLocation();
+          });
+        }
+        
+        // Initial search when map loads
+        map.on('load', () => {
+          const center = map.getCenter();
+          searchBakeriesAround(center.lng, center.lat);
+        });
+      } catch (error) {
+        console.error('Error initializing map:', error);
+        const status = document.getElementById('status');
+        if (status) {
+          status.textContent = 'Error loading map. Please refresh the page.';
+        }
+        mapInitialized = false; // Allow retry
+      }
+    }
+    
+    // Try to initialize when both conditions are met
+    function tryInitialize() {
+      // Check if DOM is ready and Mapbox is loaded
+      if (document.readyState === 'loading') {
+        return; // Wait for DOMContentLoaded
+      }
+      
+      if (typeof mapboxgl === 'undefined') {
+        return; // Wait for Mapbox to load
+      }
+      
+      if (!document.getElementById('map')) {
+        return; // Wait for map container
+      }
+      
+      initializeMap();
+    }
+    
+    // Wait for DOM to be ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', tryInitialize);
+    } else {
+      // DOM already loaded, try to initialize
+      tryInitialize();
+    }
+    
+    // Fallback: poll for Mapbox if onload didn't fire
+    setTimeout(function() {
+      if (!mapboxLoaded && typeof mapboxgl !== 'undefined') {
+        mapboxLoaded = true;
+        tryInitialize();
+      }
+    }, 100);
+  </script>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.js" onload="initMapbox()"></script>
+{% endblock content %}

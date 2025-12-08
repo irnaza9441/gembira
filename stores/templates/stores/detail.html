@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="p-3">
+  <h3>Order #{{ order.id }}</h3>
+  <p>Total: ${{ order.total }} • Placed: {{ order.date|date:"Y-m-d H:i" }} • Status: {{ order.status }}</p>
+  <table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Price</th>
+            <th>Qty</th>
+            </tr></thead>
+    <tbody>
+      {% for it in items %}
+        <tr>
+          <td>{{ it.drink.name }}</td>
+          <td>${{ it.price }}</td>
+          <td>{{ it.quantity }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+  </table>
+  
+  <form method="post" action="{% url 'reorder' id=order.id %}">
+    {% csrf_token %}
+    <button class="btn btn-primary" type="submit">Re-order all items</button>
+  </form>
+</div>
+
+{% endblock %}
