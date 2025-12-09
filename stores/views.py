@@ -9,8 +9,6 @@ import json
 
 from django.core.paginator import Paginator
 from django.contrib import messages
-from django.conf import settings
-from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect
 def add_to_cart(request, id):
     if request.method != 'POST':
@@ -143,119 +141,30 @@ def purchase(request):
         # store serializable representation for later order creation
         items.append({'drink_id': drink.id, 'quantity': qty, 'price': price_per_item, 'customization': it.get('customization', {})})
 
-    # Save pending order in session so it can be created after payment
+    # Save pending order in session so it can be created when user confirms
     request.session['pending_order'] = {'items': items, 'total': total}
     request.session.modified = True
 
-    return render(request, 'stores/purchase.html', {'template_data': {'total': total}})
+    # Pass human-friendly dollar amount to template (stored total is in cents)
+    total_display = total / 100.0
+    return render(request, 'stores/purchase.html', {'template_data': {'total': total_display}})
 
 
 @login_required
-def create_stripe_checkout_session(request):
-    """Create a Stripe Checkout Session from the pending order stored in the session.
-
-    Stores the pending order under a key tied to the Stripe session id so the
-    order can be created when the user is redirected back to the success URL.
+def complete_purchase(request):
+    """Create the Order from the pending order stored in the session and
+    show a simple confirmation page (no Stripe).
     """
-    pending = request.session.get('pending_order')
+    if request.method != 'POST':
+        return redirect('stores.cart')
+
+    pending = request.session.pop('pending_order', None)
     if not pending:
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            from django.http import JsonResponse
-            return JsonResponse({'error': 'No pending order found. Please try again.'}, status=400)
         messages.error(request, 'No pending order found. Please try again.')
         return redirect('stores.cart')
 
-    if not getattr(settings, 'STRIPE_TEST_MODE', True):
-        messages.error(request, 'Stripe test mode is not enabled.')
-        return redirect('stores.purchase')
-
-    try:
-        import stripe
-    except Exception:
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            from django.http import JsonResponse
-            return JsonResponse({'error': 'Stripe library not installed.'}, status=500)
-        messages.error(request, 'Stripe library not installed. Install the `stripe` package to use test checkout.')
-        return redirect('stores.purchase')
-
-    stripe.api_key = settings.STRIPE_SECRET_KEY
-
-    domain = request.build_absolute_uri('/')[:-1]
-    # Include the Checkout Session id on redirect so we can verify payment
-    success_url = domain + reverse('stores.payment_success') + '?session_id={CHECKOUT_SESSION_ID}'
-    cancel_url = domain + reverse('stores.payment_cancel')
-
-    # Build line items from pending order (single aggregate line item is fine)
-    try:
-        session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=[{
-                'price_data': {
-                    'currency': 'usd',
-                    'product_data': {'name': 'Stores order'},
-                    'unit_amount': int(pending['total'] * 100),
-                },
-                'quantity': 1,
-            }],
-            mode='payment',
-            success_url=success_url,
-            cancel_url=cancel_url,
-        )
-    except Exception as e:
-        # Return a JSON error for XHR so the frontend can show it cleanly.
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            from django.http import JsonResponse
-            return JsonResponse({'error': f'Failed to create Stripe session: {e}'}, status=400)
-        messages.error(request, f'Failed to create Stripe session: {e}')
-        return redirect('stores.purchase')
-
-    # Save the pending order under a key tied to the Stripe session id
-    request.session[f'pending_stripe_{session.id}'] = pending
-    request.session.modified = True
-
-    # If the request is an XHR/fetch, return the session URL as JSON so
-    # client-side code can navigate and surface errors cleanly. Otherwise
-    # perform a normal server-side redirect.
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        from django.http import JsonResponse
-        return JsonResponse({'url': session.url})
-
-    return redirect(session.url, code=303)
-
-
-@login_required
-def payment_success(request):
-    """Verify the Stripe session and create the real Order after successful payment."""
-    session_id = request.GET.get('session_id')
-    if not session_id:
-        messages.error(request, 'Missing session id from Stripe. Cannot verify payment.')
-        return redirect('stores.cafe')
-
-    try:
-        import stripe
-    except Exception:
-        messages.error(request, 'Stripe library not installed. Cannot verify payment.')
-        return redirect('stores.cafe')
-
-    stripe.api_key = settings.STRIPE_SECRET_KEY
-
-    try:
-        stripe_session = stripe.checkout.Session.retrieve(session_id)
-    except Exception as e:
-        messages.error(request, f'Failed to retrieve Stripe session: {e}')
-        return redirect('stores.cafe')
-
-    # Ensure the session is paid
-    paid = getattr(stripe_session, 'payment_status', '') == 'paid' or getattr(stripe_session, 'status', '') == 'complete'
-
-    pending = request.session.pop(f'pending_stripe_{session_id}', None)
-
-    if not paid or not pending:
-        messages.error(request, 'Payment not completed or pending order missing.')
-        return redirect('stores.cafe')
-
-    # Create the Order now that payment is confirmed
-    order = Order.objects.create(user=request.user, total=pending['total'], status='Paid (stripe-test)')
+    # Create the Order now that the user confirmed purchase
+    order = Order.objects.create(user=request.user, total=pending['total'], status='Paid')
     for it in pending.get('items', []):
         try:
             drink = Drink.objects.get(id=int(it.get('drink_id')))
@@ -267,7 +176,12 @@ def payment_success(request):
     request.session['cart_drinks'] = []
     request.session.modified = True
 
-    return render(request, 'stores/payment_success.html', {'template_data': {'order_id': order.id, 'total': order.total}})
+    # Show dollars rather than cents
+    total_display = order.total / 100.0 if order.total is not None else 0
+    return render(request, 'stores/payment_success.html', {'template_data': {'order_id': order.id, 'total': total_display}})
+
+
+
 
 
 @login_required
@@ -275,7 +189,8 @@ def payment_cancel(request):
     # If the user cancelled, just show the cancel page. The pending order remains in session.
     pending = request.session.get('pending_order')
     total = pending.get('total') if pending else 0
-    return render(request, 'stores/payment_cancel.html', {'template_data': {'order_id': None, 'total': total}})
+    total_display = total / 100.0 if total else 0
+    return render(request, 'stores/payment_cancel.html', {'template_data': {'order_id': None, 'total': total_display}})
 
 def cafe(request):
     template_data = {}

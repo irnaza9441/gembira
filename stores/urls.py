@@ -16,10 +16,9 @@ urlpatterns = [
     path('update/<str:cart_key>/', views.update_cart_item, name='stores.update_cart_item'),
     path('remove/<str:cart_key>/', views.remove_cart_item, name='stores.remove_cart_item'),
     path('purchase/', views.purchase, name='stores.purchase'),
-    # Stripe test checkout endpoints (order created after successful payment)
-    path('stripe/create-session/', views.create_stripe_checkout_session, name='stores.stripe_create_session'),
-    path('stripe/success/', views.payment_success, name='stores.payment_success'),
-    path('stripe/cancel/', views.payment_cancel, name='stores.payment_cancel'),
+    # Simple purchase completion (no Stripe)
+    path('purchase/complete/', views.complete_purchase, name='stores.complete_purchase'),
+    path('purchase/cancel/', views.payment_cancel, name='stores.payment_cancel'),
     path('review/<int:store_id>/', views.submit_review, name='stores.submit_review'),
     path('status/', views.Status, name='stores.status'),
     path("cart/", views.cart, name="cart"),

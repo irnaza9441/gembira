@@ -137,7 +137,4 @@ STATICFILES_DIRS = [
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
-# Stripe configuration (supports test mode via environment vars)
-STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_12345')
-STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_12345')
-STRIPE_TEST_MODE = os.environ.get('STRIPE_TEST_MODE', 'True') == 'True'
+# Stripe configuration removed
