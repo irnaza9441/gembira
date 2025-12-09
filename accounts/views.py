@@ -14,7 +14,7 @@ def logout(request):
 
 def login(request):
     template_data = {}
-    template_data['title'] = 'Login'
+    template_data['title'] = 'Customer Login'
     if request.method == 'GET':
         return render(request, 'accounts/login.html', {'template_data': template_data})
     elif request.method == 'POST':
@@ -23,6 +23,14 @@ def login(request):
             template_data['error'] = 'The username or password is incorrect.'
             return render(request, 'accounts/login.html', {'template_data': template_data})
         else:
+            # Prevent managers from logging in through the customer login page
+            try:
+                role = user.profile.role
+            except Exception:
+                role = None
+            if user.is_staff or role == 'manager':
+                template_data['error'] = 'Please use the manager login page to sign in as a manager.'
+                return render(request, 'accounts/login.html', {'template_data': template_data})
             auth_login(request, user)
             return redirect('home.index')
 
@@ -37,10 +45,15 @@ def manager_login(request):
         if user is None:
             template_data['error'] = 'The username or password is incorrect.'
             return render(request, 'accounts/manager_login.html', {'template_data': template_data})
-        elif not user.is_staff:
-            template_data['error'] = 'You are not authorized to access the admin dashboard.'
-            return render(request, 'accounts/manager_login.html', {'template_data': template_data})
+        # Only allow staff/manager accounts to login on the manager page
         else:
+            try:
+                role = user.profile.role
+            except Exception:
+                role = None
+            if not (user.is_staff or role == 'manager'):
+                template_data['error'] = 'Please use the customer login page to sign in as a customer.'
+                return render(request, 'accounts/manager_login.html', {'template_data': template_data})
             auth_login(request, user)
             return redirect('home.index')
 
