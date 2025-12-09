@@ -17,7 +17,7 @@
         {% for order in template_data.orders %}
           <tr>
             <td>{{ order.id }}</td>
-            <td> $ {{ order.total }}</td>
+            <td>$ {{ order.total_display }}</td>
             <td>{{ order.date|date:"Y-m-d H:i" }}</td>
             <td class="d-flex gap-2">
                 <a class="btn btn-sm btn-outline-primary" href="{% url 'detail' order.id %}">View</a>

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django import forms
+from decimal import Decimal
 
 class Store(models.Model):
     id = models.AutoField(primary_key=True)
@@ -32,19 +33,49 @@ class Drink(models.Model):
         return self.price / 100.0 if self.price else 5.0
 
 class DrinkForm(forms.ModelForm):
+    # Present price to managers in dollars (e.g. 5.00) while storing cents in the DB.
+    price = forms.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        min_value=Decimal('0.00'),
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+        label='Price (dollars)'
+    )
+
     class Meta:
         model = Drink
         fields = ['name', 'price', 'image']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '0'}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
         }
-        labels = {
-            'name': 'Drink Name',
-            'price': 'Price (cents)',
-            'image': 'Image',
-        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # If editing an existing instance, show dollars in the form initial value
+        if self.instance and getattr(self.instance, 'price', None) is not None:
+            try:
+                self.fields['price'].initial = Decimal(self.instance.price) / Decimal(100)
+            except Exception:
+                # leave initial as-is on error
+                pass
+
+    def save(self, commit=True):
+        # Convert dollars back to integer cents for storage
+        instance = super().save(commit=False)
+        try:
+            val = self.cleaned_data.get('price')
+            if val is None:
+                cents = 0
+            else:
+                # Decimal -> cents (int)
+                cents = int((Decimal(val) * Decimal(100)).to_integral_value())
+        except Exception:
+            cents = 0
+        instance.price = cents
+        if commit:
+            instance.save()
+        return instance
 
 class Order(models.Model):
     id = models.AutoField(primary_key=True)

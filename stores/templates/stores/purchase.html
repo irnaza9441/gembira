@@ -5,7 +5,7 @@
     <h2>Purchase complete</h2>
     <hr />
     <p>Please review your order below and click Purchase to place it.</p>
-    <p>Total: <strong>${{ template_data.total }}</strong></p>
+  <p>Total: <strong>${{ template_data.total|floatformat:2 }}</strong></p>
     <div class="mt-3">
       <a href="{% url 'stores.cafe' %}" class="btn btn-primary me-2">Back to drinks</a>
       <form method="post" action="{% url 'stores.complete_purchase' %}" style="display:inline">

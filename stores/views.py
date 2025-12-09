@@ -384,11 +384,21 @@ def submit_review(request, store_id):
    
 @login_required
 def Status(request):
-    order = Order.objects.filter(user=request.user).only('id', 'total', 'date','status')
-    paginator = Paginator(order, 10)
+    order_qs = Order.objects.filter(user=request.user).only('id', 'total', 'date', 'status')
+    paginator = Paginator(order_qs, 10)
     page_number = request.GET.get('page')
-    order = paginator.get_page(page_number)
-    return render(request, 'stores/status.html', {'template_data': {'orders': order}})
+    page = paginator.get_page(page_number)
+
+    # Attach a display-friendly dollar string to each order so templates
+    # don't need a custom templatetag and won't fail if tags aren't loaded.
+    for o in page:
+        try:
+            cents = o.total if o.total is not None else 0
+            o.total_display = "{:.2f}".format(cents / 100.0)
+        except Exception:
+            o.total_display = "0.00"
+
+    return render(request, 'stores/status.html', {'template_data': {'orders': page}})
 
 @login_required
 def order_details(request, id):
